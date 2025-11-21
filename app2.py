@@ -157,31 +157,39 @@ def process_pdf(pdf_path):
         operating_fees = fees_match.group(1) if fees_match else None
 
         # --------------------------------------------------------
-        # DETALLES — EXTRACCIÓN MULTIPLES SECCIONES
+        # DETALLES — EXTRACCIÓN CON ESPACIO AMPLIO ANTES DEL TOTAL
         # --------------------------------------------------------
         details = []
 
-        for match_header in re.finditer(r'DESCRIPTION\s+TOTAL', text):
-            start_idx = match_header.end()
-            remaining_text = text[start_idx:]
+        # Buscar inicio de detalles
+        match_header = re.search(r'DESCRIPTION\s+TOTAL', text)
+        if match_header:
+            details_text = text[match_header.end():]
 
             # Cortar antes de la nota final
-            end_note_match = re.search(r'Swissport is aware', remaining_text, re.IGNORECASE)
+            end_note_match = re.search(r'Swissport is aware', details_text, re.IGNORECASE)
             if end_note_match:
-                remaining_text = remaining_text[:end_note_match.start()]
+                details_text = details_text[:end_note_match.start()]
 
-            # Regex: cualquier texto + muchos espacios + número decimal
-            detail_pattern = re.compile(r'^(.*?)\s{2,}([\d,]+\.\d{2})\s*$', re.MULTILINE)
+            # Regex para capturar líneas con cualquier texto y un número al final (sin símbolos de $)
+            detail_pattern = re.compile(
+                r'^(.*?)\s{2,}([\d,]+\.\d{2})\s*$',
+                re.MULTILINE
+            )
 
-            for m in detail_pattern.finditer(remaining_text):
+            for m in detail_pattern.finditer(details_text):
                 desc = m.group(1).strip()
                 total_val = m.group(2).strip()
 
+                # Filtrar líneas no válidas
                 bad_keywords = ["subtotal", "tax", "operating", "tax id", "swissport", "total amount due"]
                 if any(bad in desc.lower() for bad in bad_keywords):
                     continue
 
-                details.append({"description": desc, "total": total_val})
+                details.append({
+                    "description": desc,
+                    "total": total_val
+                })
 
         # --------------------------------------------------------
         # Respuesta final
