@@ -1,0 +1,9 @@
+issuer: .+
+keywords:
+  - Invoice
+fields:
+  invoice_number:
+    required: false
+    type: str
+    regex: "Invoice\s*No\.?\s*([A-Z0-9]+)"
+    groups: 1
